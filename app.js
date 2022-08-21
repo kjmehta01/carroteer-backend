@@ -1,15 +1,38 @@
+// express
 const app = require('express')();
 const http = require('http').Server(app);
 const jsonParser = require('body-parser').json();
 const port = 3000;
 
+// cors
 const cors = require('cors');
 app.use(cors({
     origin: '*'
 }))
 
+// postgres
+const { Client } = require('pg');
+
+console.log(process.env.DATABASE_URL);
+
+const client = new Client({
+    connectionString: process.env.DATABASE_URL,
+    ssl: {
+        rejectUnauthorized: false
+    }
+});
+
+
+client.connect();
+client.query('CREATE TABLE [IF NOT EXISTS] dailyHighscores(name VARCHAR (8) NOT NULL,time INT NOT NULL);', (err, res) => {
+    if (err) throw err;
+    console.log(res);
+});
+
 
 let dailyLeaderboard = [];
+
+
 
 /*function resetLeaderboard(){
     dailyLeaderboard = [];
@@ -26,7 +49,14 @@ var dayInMilliseconds = 1000 * 60 * 60 * 24;
 setInterval(function() { alert("foo"); },dayInMilliseconds );*/
 
 app.get('/getScores', function (req, res) {
-    res.send(dailyLeaderboard);
+    client.query('SELECT name, time FROM dailyHighscores', (err, res) => {
+        if (err) throw err;
+        console.log(res);
+        for (let row of res.rows) {
+            console.log(JSON.stringify(row));
+        }
+        //client.end();
+    });
 });
 
 app.post('/addScore', jsonParser, function (req, res) {
