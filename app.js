@@ -50,6 +50,6 @@ app.post('/addScore', jsonParser, function (req, res) {
     res.send(dailyLeaderboard);
 });
 
-http.listen(port, function () {
+http.listen(process.env.PORT || 3000, function () {
     console.log('listening on *:3000');
 });
