@@ -13,8 +13,6 @@ app.use(cors({
 // postgres
 const { Client } = require('pg');
 
-console.log(process.env.DATABASE_URL);
-
 const client = new Client({
     connectionString: 'postgres://bbgwntcjtmijyn:379c838039baf2acedbb0e6b5fba63b13a209b7b65b5957292e244f43d7e8c5e@ec2-54-86-106-48.compute-1.amazonaws.com:5432/d51k32h4ustu3h',
     ssl: {
@@ -28,7 +26,6 @@ client.query('CREATE TABLE IF NOT EXISTS dailyHighscores(name VARCHAR (8) NOT NU
     if (err) {
         throw err;
     }
-    console.log(res);
 });
 
 
@@ -55,7 +52,9 @@ setTimeout(resetLeaderboard, millisTill10);
 app.get('/getScores', function (req, res) {
     client.query('SELECT name, time FROM dailyHighscores', (err, res2) => {
         if (err) throw err;
-        res.send(res2.rows);
+        let ret = res2.rows;
+        ret.sort((a,b) => a.time - b.time);
+        res.send(ret);
     });
 });
 
@@ -98,9 +97,6 @@ app.post('/addScore', jsonParser, function (req, res) {
         }
         res.sendStatus(200);
     });
-
-
-    
 });
 
 app.post('/clearScores', function (req, res) {
