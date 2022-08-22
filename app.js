@@ -16,7 +16,7 @@ const { Client } = require('pg');
 console.log(process.env.DATABASE_URL);
 
 const client = new Client({
-    connectionString: process.env.DATABASE_URL,
+    connectionString: 'postgres://bbgwntcjtmijyn:379c838039baf2acedbb0e6b5fba63b13a209b7b65b5957292e244f43d7e8c5e@ec2-54-86-106-48.compute-1.amazonaws.com:5432/d51k32h4ustu3h',
     ssl: {
         rejectUnauthorized: false
     }
@@ -24,60 +24,95 @@ const client = new Client({
 
 
 client.connect();
-client.query('CREATE TABLE [IF NOT EXISTS] dailyHighscores(name VARCHAR (8) NOT NULL,time INT NOT NULL);', (err, res) => {
-    if (err) throw err;
+client.query('CREATE TABLE IF NOT EXISTS dailyHighscores(name VARCHAR (8) NOT NULL,time INT NOT NULL);', (err, res) => {
+    if (err) {
+        throw err;
+    }
     console.log(res);
 });
 
 
-let dailyLeaderboard = [];
 
-
-
-/*function resetLeaderboard(){
-    dailyLeaderboard = [];
-
+function resetLeaderboard(){
+    client.query('TRUNCATE TABLE dailyHighscores', (err, res2) => {
+        if(err){
+            throw err;
+        }
+    });
+    let dayInMilliseconds = 1000 * 60 * 60 * 24;
+    setTimeout(resetLeaderboard,dayInMilliseconds);
 }
-var now = new Date();
-var millisTill10 = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 0, 0, 0) - now;
+
+let now = new Date();
+let millisTill10 = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 10, 0, 0, 0) - now;
 if (millisTill10 < 0) {
      millisTill10 += 86400000; // it's after 10am, try 10am tomorrow.
 }
 setTimeout(resetLeaderboard, millisTill10);
 
-var dayInMilliseconds = 1000 * 60 * 60 * 24;
-setInterval(function() { alert("foo"); },dayInMilliseconds );*/
+
 
 app.get('/getScores', function (req, res) {
-    client.query('SELECT name, time FROM dailyHighscores', (err, res) => {
+    client.query('SELECT name, time FROM dailyHighscores', (err, res2) => {
         if (err) throw err;
-        console.log(res);
-        for (let row of res.rows) {
-            console.log(JSON.stringify(row));
-        }
-        //client.end();
+        res.send(res2.rows);
     });
 });
 
 app.post('/addScore', jsonParser, function (req, res) {
-    if (req.body.name != undefined && req.body.time != undefined) {
-        let added = false;
-        for (let i = 0; i < Math.min(dailyLeaderboard.length, 5); i++) {
-            if (dailyLeaderboard[i].time > req.body.time) {
-                dailyLeaderboard.splice(i, 0, { name: req.body.name, time: req.body.time });
-                added = true;
-                console.log("added time, " + req.body.name + " : " + req.body.time);
-                if (dailyLeaderboard.length > 5) {
-                    dailyLeaderboard.pop();
+    client.query('SELECT name, time FROM dailyHighscores', (err, res2) => {
+        if (err) {
+            res.sendStatus(500);
+            throw err;
+        }
+        else {
+            let dailyLeaderboard = res2.rows;
+            if (req.body.name != undefined && req.body.time != undefined) {
+                let maxTime = -1;
+                for (let i = 0; i < dailyLeaderboard.length; i++) {
+                    maxTime = Math.max(dailyLeaderboard[i].time, maxTime);
                 }
-                break;
+
+                let isHighscore = maxTime > req.body.time;
+
+                // delete highest score if leaderboard full
+                if(isHighscore && dailyLeaderboard.length == 5){
+                    client.query("DELETE FROM dailyHighscores WHERE time = " + maxTime + ";", (err, res3) => {
+                        if(err){
+                            res.sendStatus(500);
+                            throw err;
+                        }
+                    });
+                }
+
+                // add new score
+                if (isHighscore || dailyLeaderboard.length < 5) {
+                    client.query("INSERT INTO dailyHighscores (name, time) VALUES('" + req.body.name + "'," + req.body.time + ");", (err, res4) => {
+                        if(err){
+                            res.sendStatus(500);
+                            throw err;
+                        }
+                    });
+                }
             }
         }
-        if (added == false && dailyLeaderboard.length < 5) {
-            dailyLeaderboard.push({ name: req.body.name, time: req.body.time });
+        res.sendStatus(200);
+    });
+
+
+    
+});
+
+app.post('/clearScores', function (req, res) {
+    client.query('TRUNCATE TABLE dailyHighscores', (err, res2) => {
+        if(err){
+            res.sendStatus(500);
+            throw err;
         }
-    }
-    res.send(dailyLeaderboard);
+        else{
+            res.sendStatus(200);
+        }
+    });
 });
 
 http.listen(process.env.PORT || 5000, function () {
