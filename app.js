@@ -126,7 +126,7 @@ const hopSpeed = 1000;
 const numStones = 5;
 const numCarrots = 5;
 
-const tickRate = 1;
+const tickRate = 10;
 const frequency = 1 / tickRate;
 let needyGame = -1;
 let games = new Map();
@@ -276,6 +276,7 @@ io.on("connection", (socket) => {
             game.board[x][y] = dir;
             game.p1.updatePlayerCoords(game.board);
             game.p2.updatePlayerCoords(game.board);
+            console.log('placed');
             socket.emit('place success');
         }
         else {
@@ -334,65 +335,87 @@ class Player {
     }
 
     updatePlayerCoords(board) {
-        function overAndOver(xdiff, ydiff, newDir) {
-            this.x += xdiff;
-            this.y += ydiff;
-            this.dir = newDir;
-        }
+
 
         if (!this.isWaiting) {
             this.isWaiting = true;
-            setTimeout(function () {
+
+            setTimeout(() => {
                 this.isWaiting = false;
+
                 if (this.dir == 'E') {
                     if (this.x + 1 < boardWidth) {
                         if (board[this.y][this.x + 1] == 'NW') {
-                            overAndOver(1, 0, 'N');
+                            this.x += 1;
+                            this.y += 0;
+                            this.dir = 'N';
                         }
                         else if (board[this.y][this.x + 1] == "SW") {
-                            overAndOver(1, 0, 'S');
+                            this.x += 1;
+                            this.y += 0;
+                            this.dir = 'S';
                         }
                         else if (board[this.y][this.x + 1] == "WE") {
-                            overAndOver(1, 0, 'E');
+                            this.x += 1;
+                            this.y += 0;
+                            this.dir = 'E';
                         }
                     }
                 }
                 else if (this.dir == 'N') {
                     if (this.y - 1 >= 0) {
                         if (board[this.y - 1][this.x] == "SW") {
-                            overAndOver(0, -1, 'W');
+                            this.x += 0;
+                            this.y += -1;
+                            this.dir = 'W';
                         }
                         else if (board[this.y - 1][this.x] == "SE") {
-                            overAndOver(0, -1, 'E');
+                            this.x += 0;
+                            this.y += -1;
+                            this.dir = 'E';
                         }
                         else if (board[this.y - 1][this.x] == "NS") {
-                            overAndOver(0, -1, 'N');
+                            this.x += 0;
+                            this.y += -1;
+                            this.dir = 'N';
                         }
                     }
                 }
                 else if (this.dir == 'W') {
                     if (this.x - 1 >= 0) {
                         if (board[this.y][this.x - 1] == "NE") {
-                            overAndOver(-1, 0, 'N');
+                            this.x += -1;
+                            this.y += 0;
+                            this.dir = 'N';
                         }
                         else if (board[this.y][this.x - 1] == "SE") {
-                            overAndOver(-1, 0, 'S');
+                            this.x += -1;
+                            this.y += 0;
+                            this.dir = 'S';
                         }
                         else if (board[this.y][this.x - 1] == "WE") {
-                            overAndOver(-1, 0, 'W');
+                            this.x += -1;
+                            this.y += 0;
+                            this.dir = 'W';
                         }
                     }
                 }
                 else if (this.dir == 'S') {
                     if (this.y + 1 < boardHeight) {
                         if (board[this.y + 1][this.x] == "NE") {
-                            overAndOver(0, 1, 'E');
+                            this.x += 0;
+                            this.y += 1;
+                            this.dir = 'E';
                         }
                         else if (board[this.y + 1][this.x] == "NW") {
-                            overAndOver(0, 1, 'W');
+                            this.x += 0;
+                            this.y += 1;
+                            this.dir = 'W';
                         }
                         else if (board[this.y + 1][this.x] == "NS") {
-                            overAndOver(0, 1, 'S');
+                            this.x += 0;
+                            this.y += 1;
+                            this.dir = 'S';
                         }
                     }
                 }
