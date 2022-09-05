@@ -125,6 +125,7 @@ const boardWidth = 8;
 const hopSpeed = 1000;
 const numStones = 5;
 const numCarrots = 10; // MUST BE EVEN
+const bombTime = 2000;
 
 const tickRate = 10;
 const frequency = 1 / tickRate;
@@ -247,6 +248,23 @@ io.on("connection", (socket) => {
         }
 
 
+        // BOMBS
+        let bombs = [];
+        for (let row = 0; row < boardHeight; row++) {
+            bombs[row] = [];
+            for (let col = 0; col < boardWidth; col++) {
+                bombs[row][col] = false;
+            }
+        }
+
+        let bombTimers = [];
+        for (let row = 0; row < boardHeight; row++) {
+            bombTimers[row] = [];
+            for (let col = 0; col < boardWidth; col++) {
+                bombTimers[row][col] = undefined;
+            }
+        }
+
 
         // PLAYER
         let p1 = new Player(0, 0, 'E');
@@ -259,6 +277,8 @@ io.on("connection", (socket) => {
             stones: stones,
             p1: p1,
             p2: p2,
+            bombs: bombs,
+            bombTimers: bombTimers
         }
 
         return game;
@@ -274,20 +294,42 @@ io.on("connection", (socket) => {
             game.carrots[game.p2.y][game.p2.x] = false;
         }
 
-        io.to(myRoom).emit('board', game.board, game.carrots, game.stones, game.p1.x, game.p1.y, game.p1.dir, game.p1.carrotCount, game.p2.x, game.p2.y, game.p2.dir, game.p2.carrotCount);
+        io.to(myRoom).emit('board', game.board, game.carrots, game.stones, game.bombs, game.p1.x, game.p1.y, game.p1.dir, game.p1.carrotCount, game.p2.x, game.p2.y, game.p2.dir, game.p2.carrotCount);
     }
 
-    socket.on('place piece', (x, y, dir) => {
+    socket.on('place piece', (y, x, dir) => {
         let game = games.get(myRoom);
 
-        if (game != undefined && game.board[x][y] == 'E' && !game.stones[x][y]) {
-            game.board[x][y] = dir;
-            game.p1.updatePlayerCoords(game.board);
-            game.p2.updatePlayerCoords(game.board);
-            socket.emit('place success');
+        if (game != undefined && game.board[y][x] == 'E' && !game.stones[y][x]) {
+            game.board[y][x] = dir;
+            game.p1.updatePlayerCoords(game);
+            game.p2.updatePlayerCoords(game);
+            socket.emit('place piece success');
         }
         else {
-            socket.emit('place fail');
+            socket.emit('place piece fail');
+        }
+    });
+
+    socket.on('place bomb', (y, x) => {
+        let game = games.get(myRoom)
+
+        if (game != undefined && !game.bombs[y][x] && !game.stones[y][x]) {
+            game.bombs[y][x] = true;
+            game.bombTimers[y][x] = setTimeout(() => {
+                if (game.board[y][x] != 'E') {
+                    game.board[y][x] = 'E';
+                }
+                game.bombTimers[y][x] = undefined;
+                game.bombs[y][x] = false;
+
+                if(game.p1.x == x && game.p1.y == y){
+                    game.p1.resetCoords(game);
+                }
+                if(game.p2.x == x && game.p2.y == y){
+                    game.p2.resetCoords(game);
+                }
+            }, bombTime);
         }
     });
 
@@ -329,11 +371,21 @@ http.listen(process.env.PORT || 5000, function () {
 
 class Player {
     constructor(myx, myy, mydir) {
+        this.startingX = myx;
+        this.startingY = myy;
+        this.startingDir = mydir;
         this.x = myx;
         this.y = myy;
         this.dir = mydir;
         this.carrotCount = 0;
         this.isWaiting = false;
+    }
+
+    resetCoords(game){
+        this.x = this.startingX;
+        this.y = this.startingY;
+        this.dir = this.startingDir;
+        this.updatePlayerCoords(game);
     }
 
     eatCarrot(carrots) {
@@ -343,8 +395,8 @@ class Player {
         }
     }
 
-    updatePlayerCoords(board) {
-
+    updatePlayerCoords(game) {
+        let board = game.board;
 
         if (!this.isWaiting) {
             this.isWaiting = true;
@@ -358,19 +410,22 @@ class Player {
                             this.x += 1;
                             this.y += 0;
                             this.dir = 'N';
-                            this.updatePlayerCoords(board);
+                            this.clearBomb(this.x,this.y,game);
+                            this.updatePlayerCoords(game);
                         }
                         else if (board[this.y][this.x + 1] == "SW") {
                             this.x += 1;
                             this.y += 0;
                             this.dir = 'S';
-                            this.updatePlayerCoords(board);
+                            this.clearBomb(this.x,this.y,game);
+                            this.updatePlayerCoords(game);
                         }
                         else if (board[this.y][this.x + 1] == "WE") {
                             this.x += 1;
                             this.y += 0;
                             this.dir = 'E';
-                            this.updatePlayerCoords(board);
+                            this.clearBomb(this.x,this.y,game);
+                            this.updatePlayerCoords(game);
                         }
                     }
                 }
@@ -380,19 +435,22 @@ class Player {
                             this.x += 0;
                             this.y += -1;
                             this.dir = 'W';
-                            this.updatePlayerCoords(board);
+                            this.clearBomb(this.x,this.y,game);
+                            this.updatePlayerCoords(game);
                         }
                         else if (board[this.y - 1][this.x] == "SE") {
                             this.x += 0;
                             this.y += -1;
                             this.dir = 'E';
-                            this.updatePlayerCoords(board);
+                            this.clearBomb(this.x,this.y,game);
+                            this.updatePlayerCoords(game);
                         }
                         else if (board[this.y - 1][this.x] == "NS") {
                             this.x += 0;
                             this.y += -1;
                             this.dir = 'N';
-                            this.updatePlayerCoords(board);
+                            this.clearBomb(this.x,this.y,game);
+                            this.updatePlayerCoords(game);
                         }
                     }
                 }
@@ -402,45 +460,59 @@ class Player {
                             this.x += -1;
                             this.y += 0;
                             this.dir = 'N';
-                            this.updatePlayerCoords(board);
+                            this.clearBomb(this.x,this.y,game);
+                            this.updatePlayerCoords(game);
                         }
                         else if (board[this.y][this.x - 1] == "SE") {
                             this.x += -1;
                             this.y += 0;
                             this.dir = 'S';
-                            this.updatePlayerCoords(board);
+                            this.clearBomb(this.x,this.y,game);
+                            this.updatePlayerCoords(game);
                         }
                         else if (board[this.y][this.x - 1] == "WE") {
                             this.x += -1;
                             this.y += 0;
                             this.dir = 'W';
-                            this.updatePlayerCoords(board);
+                            this.clearBomb(this.x,this.y,game);
+                            this.updatePlayerCoords(game);
                         }
                     }
                 }
                 else if (this.dir == 'S') {
-                    if (this.y + 1 < boardHeight) {
+                    if (this.y + 1 < boardHeight - 1) {
                         if (board[this.y + 1][this.x] == "NE") {
                             this.x += 0;
                             this.y += 1;
                             this.dir = 'E';
-                            this.updatePlayerCoords(board);
+                            this.clearBomb(this.x,this.y,game);
+                            this.updatePlayerCoords(game);
                         }
                         else if (board[this.y + 1][this.x] == "NW") {
                             this.x += 0;
                             this.y += 1;
                             this.dir = 'W';
-                            this.updatePlayerCoords(board);
+                            this.clearBomb(this.x,this.y,game);
+                            this.updatePlayerCoords(game);
                         }
                         else if (board[this.y + 1][this.x] == "NS") {
                             this.x += 0;
                             this.y += 1;
                             this.dir = 'S';
-                            this.updatePlayerCoords(board);
+                            this.clearBomb(this.x,this.y,game);
+                            this.updatePlayerCoords(game);
                         }
                     }
                 }
             }, hopSpeed);
+        }
+    }
+
+    clearBomb(x,y,game){
+        if(game.bombs[x][y]){
+            clearTimeout(game.bombTimers[x][y]);
+            game.bombTimers[x][y] = undefined;
+            game.bombs[x][y] = false;
         }
     }
 }
