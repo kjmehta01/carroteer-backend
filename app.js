@@ -189,7 +189,9 @@ io.on("connection", (socket) => {
                 carrots[row][col] = false;
             }
         }
-        for (let i = 0; i < Math.floor(numCarrots / 2); i++) {
+        carrots[3][4] = true;
+        carrots[4][3] = true;
+        for (let i = 0; i < Math.floor(numCarrots / 2) - 2; i++) {
             do {
                 var xtemp = Math.floor(Math.random() * boardWidth);
                 var ytemp = Math.floor(Math.random() * boardHeight);
