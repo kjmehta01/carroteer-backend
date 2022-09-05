@@ -121,10 +121,10 @@ app.post('/clearScores', function (req, res) {
 
 // MULTIPLAYER
 const boardHeight = 8;
-const boardWidth = 5;
+const boardWidth = 8;
 const hopSpeed = 1000;
 const numStones = 5;
-const numCarrots = 5;
+const numCarrots = 10; // MUST BE EVEN
 
 const tickRate = 10;
 const frequency = 1 / tickRate;
@@ -136,13 +136,16 @@ io.on("connection", (socket) => {
     console.log('user connected');
 
     let myRoom;
-    let p1p2;
+    //let p1p2;
     if (needyGame != -1) {
         myRoom = 'room' + needyGame;
         console.log("STARTED" + myRoom);
         needyGame = -1;
-        p1p2 = 'p2';
-        games.set(myRoom, initializeBoard());
+
+        //p1p2 = 'p2';
+        games.set(myRoom, initializeBoard(myRoom));
+
+        io.to(myRoom).emit('p1');
 
 
         socket.join(myRoom);
@@ -155,13 +158,13 @@ io.on("connection", (socket) => {
 
         socket.join(myRoom);
 
-        p1p2 = 'p1';
+        //p1p2 = 'p1';
         needyGame = gameId;
 
         gameId = (gameId + 1) % 10000;
     }
 
-    function initializeBoard() {
+    function initializeBoard(myRoom) {
 
         // BOARD
         let board = [];
@@ -186,7 +189,7 @@ io.on("connection", (socket) => {
                 carrots[row][col] = false;
             }
         }
-        for (let i = 0; i < numCarrots; i++) {
+        for (let i = 0; i < Math.floor(numCarrots / 2); i++) {
             do {
                 var xtemp = Math.floor(Math.random() * boardWidth);
                 var ytemp = Math.floor(Math.random() * boardHeight);
@@ -205,6 +208,7 @@ io.on("connection", (socket) => {
             } while (duplicate);
 
             carrots[ytemp][xtemp] = true;
+            carrots[boardHeight - 1 - ytemp][boardWidth - 1 - xtemp] = true;
         }
 
 
@@ -218,7 +222,7 @@ io.on("connection", (socket) => {
                 stones[row][col] = false;
             }
         }
-        for (let i = 0; i < numStones; i++) {
+        for (let i = 0; i < Math.floor(numStones) / 2; i++) {
             do {
                 var xtemp = Math.floor(Math.random() * boardWidth);
                 var ytemp = Math.floor(Math.random() * boardHeight);
@@ -228,12 +232,16 @@ io.on("connection", (socket) => {
                 if ((xtemp == 0 || xtemp == 1) && ytemp == 0) {
                     duplicate = true;
                 }
+                if ((xtemp == boardWidth - 1 || xtemp == boardWidth - 2) && ytemp == boardHeight - 1) {
+                    duplicate = true;
+                }
                 if (carrots[ytemp][xtemp] || stones[ytemp][xtemp]) {
                     duplicate = true;
                 }
             } while (duplicate);
 
             stones[ytemp][xtemp] = true;
+            stones[boardHeight - 1 - ytemp][boardWidth - 1 - xtemp] = true;
         }
 
 
@@ -248,10 +256,8 @@ io.on("connection", (socket) => {
             carrots: carrots,
             stones: stones,
             p1: p1,
-            p2: p2
+            p2: p2,
         }
-
-
 
         return game;
     }
@@ -272,11 +278,10 @@ io.on("connection", (socket) => {
     socket.on('place piece', (x, y, dir) => {
         let game = games.get(myRoom);
 
-        if (game.board[x][y] == 'E' && !game.stones[x][y]) {
+        if (game != undefined && game.board[x][y] == 'E' && !game.stones[x][y]) {
             game.board[x][y] = dir;
             game.p1.updatePlayerCoords(game.board);
             game.p2.updatePlayerCoords(game.board);
-            console.log('placed');
             socket.emit('place success');
         }
         else {
@@ -287,10 +292,12 @@ io.on("connection", (socket) => {
     socket.on('disconnect', () => {
         console.log('user disconnected');
         if (games.has(myRoom)) {
-            socket.to(myRoom).emit('opp disconnect');
+            io.to(myRoom).emit('opp disconnect');
             console.log('ending ' + myRoom);
             clearInterval(intervals.get(myRoom));
             intervals.delete(myRoom);
+        }
+        else if (games.has(myRoom)) {
             games.delete(myRoom);
         }
         else {
@@ -349,16 +356,19 @@ class Player {
                             this.x += 1;
                             this.y += 0;
                             this.dir = 'N';
+                            this.updatePlayerCoords(board);
                         }
                         else if (board[this.y][this.x + 1] == "SW") {
                             this.x += 1;
                             this.y += 0;
                             this.dir = 'S';
+                            this.updatePlayerCoords(board);
                         }
                         else if (board[this.y][this.x + 1] == "WE") {
                             this.x += 1;
                             this.y += 0;
                             this.dir = 'E';
+                            this.updatePlayerCoords(board);
                         }
                     }
                 }
@@ -368,16 +378,19 @@ class Player {
                             this.x += 0;
                             this.y += -1;
                             this.dir = 'W';
+                            this.updatePlayerCoords(board);
                         }
                         else if (board[this.y - 1][this.x] == "SE") {
                             this.x += 0;
                             this.y += -1;
                             this.dir = 'E';
+                            this.updatePlayerCoords(board);
                         }
                         else if (board[this.y - 1][this.x] == "NS") {
                             this.x += 0;
                             this.y += -1;
                             this.dir = 'N';
+                            this.updatePlayerCoords(board);
                         }
                     }
                 }
@@ -387,16 +400,19 @@ class Player {
                             this.x += -1;
                             this.y += 0;
                             this.dir = 'N';
+                            this.updatePlayerCoords(board);
                         }
                         else if (board[this.y][this.x - 1] == "SE") {
                             this.x += -1;
                             this.y += 0;
                             this.dir = 'S';
+                            this.updatePlayerCoords(board);
                         }
                         else if (board[this.y][this.x - 1] == "WE") {
                             this.x += -1;
                             this.y += 0;
                             this.dir = 'W';
+                            this.updatePlayerCoords(board);
                         }
                     }
                 }
@@ -406,16 +422,19 @@ class Player {
                             this.x += 0;
                             this.y += 1;
                             this.dir = 'E';
+                            this.updatePlayerCoords(board);
                         }
                         else if (board[this.y + 1][this.x] == "NW") {
                             this.x += 0;
                             this.y += 1;
                             this.dir = 'W';
+                            this.updatePlayerCoords(board);
                         }
                         else if (board[this.y + 1][this.x] == "NS") {
                             this.x += 0;
                             this.y += 1;
                             this.dir = 'S';
+                            this.updatePlayerCoords(board);
                         }
                     }
                 }
