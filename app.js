@@ -146,7 +146,7 @@ io.on("connection", (socket) => {
         //p1p2 = 'p2';
         games.set(myRoom, initializeBoard(myRoom));
 
-        io.to(myRoom).emit('p1');
+        socket.to(myRoom).emit('p1');
 
 
         socket.join(myRoom);
@@ -163,6 +163,8 @@ io.on("connection", (socket) => {
         needyGame = gameId;
 
         gameId = (gameId + 1) % 10000;
+
+        //io.to(myRoom).emit('p1');
     }
 
     function initializeBoard(myRoom) {
@@ -480,7 +482,7 @@ class Player {
                     }
                 }
                 else if (this.dir == 'S') {
-                    if (this.y + 1 < boardHeight - 1) {
+                    if (this.y + 1 < boardHeight) {
                         if (board[this.y + 1][this.x] == "NE") {
                             this.x += 0;
                             this.y += 1;
