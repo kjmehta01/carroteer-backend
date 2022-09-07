@@ -148,11 +148,18 @@ io.on("connection", (socket) => {
 
         socket.to(myRoom).emit('p1');
 
-
         socket.join(myRoom);
 
-        let myInterval = setInterval(function () { gameLoop(myRoom) }, frequency * 1000);
-        intervals.set(myRoom, myInterval);
+
+        setTimeout(((myRoom)=>{
+            io.to(myRoom).emit('starting');
+        }).bind(null, myRoom), 1000);
+
+        setTimeout(((myRoom)=>{
+            let myInterval = setInterval(function () { gameLoop(myRoom) }, frequency * 1000);
+            intervals.set(myRoom, myInterval);
+        }).bind(null, myRoom), 6000);
+
     }
     else {
         myRoom = 'room' + gameId;
@@ -325,10 +332,10 @@ io.on("connection", (socket) => {
                 game.bombTimers[y][x] = undefined;
                 game.bombs[y][x] = false;
 
-                if(game.p1.x == x && game.p1.y == y){
+                if (game.p1.x == x && game.p1.y == y) {
                     game.p1.resetCoords(game);
                 }
-                if(game.p2.x == x && game.p2.y == y){
+                if (game.p2.x == x && game.p2.y == y) {
                     game.p2.resetCoords(game);
                 }
             }, bombTime);
@@ -383,7 +390,7 @@ class Player {
         this.isWaiting = false;
     }
 
-    resetCoords(game){
+    resetCoords(game) {
         this.x = this.startingX;
         this.y = this.startingY;
         this.dir = this.startingDir;
@@ -412,21 +419,21 @@ class Player {
                             this.x += 1;
                             this.y += 0;
                             this.dir = 'N';
-                            this.clearBomb(this.x,this.y,game);
+                            this.clearBomb(this.x, this.y, game);
                             this.updatePlayerCoords(game);
                         }
                         else if (board[this.y][this.x + 1] == "SW") {
                             this.x += 1;
                             this.y += 0;
                             this.dir = 'S';
-                            this.clearBomb(this.x,this.y,game);
+                            this.clearBomb(this.x, this.y, game);
                             this.updatePlayerCoords(game);
                         }
                         else if (board[this.y][this.x + 1] == "WE") {
                             this.x += 1;
                             this.y += 0;
                             this.dir = 'E';
-                            this.clearBomb(this.x,this.y,game);
+                            this.clearBomb(this.x, this.y, game);
                             this.updatePlayerCoords(game);
                         }
                     }
@@ -437,21 +444,21 @@ class Player {
                             this.x += 0;
                             this.y += -1;
                             this.dir = 'W';
-                            this.clearBomb(this.x,this.y,game);
+                            this.clearBomb(this.x, this.y, game);
                             this.updatePlayerCoords(game);
                         }
                         else if (board[this.y - 1][this.x] == "SE") {
                             this.x += 0;
                             this.y += -1;
                             this.dir = 'E';
-                            this.clearBomb(this.x,this.y,game);
+                            this.clearBomb(this.x, this.y, game);
                             this.updatePlayerCoords(game);
                         }
                         else if (board[this.y - 1][this.x] == "NS") {
                             this.x += 0;
                             this.y += -1;
                             this.dir = 'N';
-                            this.clearBomb(this.x,this.y,game);
+                            this.clearBomb(this.x, this.y, game);
                             this.updatePlayerCoords(game);
                         }
                     }
@@ -462,21 +469,21 @@ class Player {
                             this.x += -1;
                             this.y += 0;
                             this.dir = 'N';
-                            this.clearBomb(this.x,this.y,game);
+                            this.clearBomb(this.x, this.y, game);
                             this.updatePlayerCoords(game);
                         }
                         else if (board[this.y][this.x - 1] == "SE") {
                             this.x += -1;
                             this.y += 0;
                             this.dir = 'S';
-                            this.clearBomb(this.x,this.y,game);
+                            this.clearBomb(this.x, this.y, game);
                             this.updatePlayerCoords(game);
                         }
                         else if (board[this.y][this.x - 1] == "WE") {
                             this.x += -1;
                             this.y += 0;
                             this.dir = 'W';
-                            this.clearBomb(this.x,this.y,game);
+                            this.clearBomb(this.x, this.y, game);
                             this.updatePlayerCoords(game);
                         }
                     }
@@ -487,21 +494,21 @@ class Player {
                             this.x += 0;
                             this.y += 1;
                             this.dir = 'E';
-                            this.clearBomb(this.x,this.y,game);
+                            this.clearBomb(this.x, this.y, game);
                             this.updatePlayerCoords(game);
                         }
                         else if (board[this.y + 1][this.x] == "NW") {
                             this.x += 0;
                             this.y += 1;
                             this.dir = 'W';
-                            this.clearBomb(this.x,this.y,game);
+                            this.clearBomb(this.x, this.y, game);
                             this.updatePlayerCoords(game);
                         }
                         else if (board[this.y + 1][this.x] == "NS") {
                             this.x += 0;
                             this.y += 1;
                             this.dir = 'S';
-                            this.clearBomb(this.x,this.y,game);
+                            this.clearBomb(this.x, this.y, game);
                             this.updatePlayerCoords(game);
                         }
                     }
@@ -510,8 +517,8 @@ class Player {
         }
     }
 
-    clearBomb(x,y,game){
-        if(game.bombs[x][y]){
+    clearBomb(x, y, game) {
+        if (game.bombs[x][y]) {
             clearTimeout(game.bombTimers[x][y]);
             game.bombTimers[x][y] = undefined;
             game.bombs[x][y] = false;
