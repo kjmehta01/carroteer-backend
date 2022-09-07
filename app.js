@@ -153,12 +153,12 @@ io.on("connection", (socket) => {
 
         setTimeout(((myRoom)=>{
             io.to(myRoom).emit('starting');
-        }).bind(null, myRoom), 1000);
+        }).bind(null, myRoom), 100);
 
         setTimeout(((myRoom)=>{
             let myInterval = setInterval(function () { gameLoop(myRoom) }, frequency * 1000);
             intervals.set(myRoom, myInterval);
-        }).bind(null, myRoom), 6000);
+        }).bind(null, myRoom), 500);
 
     }
     else {
