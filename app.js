@@ -326,7 +326,7 @@ io.on("connection", (socket) => {
         if (game != undefined && !game.bombs[y][x] && !game.stones[y][x]) {
             game.bombs[y][x] = true;
             game.bombTimers[y][x] = setTimeout(() => {
-                if (game.board[y][x] != 'E') {
+                if (game.board[y][x] != 'E' && !(x == 0 && y == 0) && !(x == boardWidth - 1 && y == boardHeight - 1)) {
                     game.board[y][x] = 'E';
                 }
                 game.bombTimers[y][x] = undefined;
@@ -344,7 +344,7 @@ io.on("connection", (socket) => {
 
     socket.on('disconnect', () => {
         console.log('user disconnected');
-        if (games.has(myRoom)) {
+        if (games.has(myRoom) && intervals.has(myRoom)) {
             io.to(myRoom).emit('opp disconnect');
             console.log('ending ' + myRoom);
             clearInterval(intervals.get(myRoom));
